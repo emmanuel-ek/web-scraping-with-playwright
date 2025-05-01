@@ -1,0 +1,14 @@
+# Virtual Environment
+myenv/
+m365-env/
+venv/
+ENV/
+env/
+.venv/
+.env/
+
+# VS Code
+.vscode/
+*.code-workspace
+.env
+
