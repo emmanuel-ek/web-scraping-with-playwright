@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 import json
 from pymongo import MongoClient
 
-data = []; # list of dictionary form the scraped data
+data = [] # list of dictionary form the scraped data
 client = MongoClient("mongodb://localhost:27017/") # mongo db client
 
 def scrape_page_content(books, limit_per_page, base_url):
