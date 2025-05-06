@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError
 from playwright_stealth import stealth_sync
 import time
 import requests
@@ -8,12 +8,12 @@ class WebHackingBot:
     def __init__(self):
         self.pw = sync_playwright().start()
         self.connection_url = 'wss://browser.zenrows.com?apikey=8d52a81b3ca57cdc829963a7b6b17851e192a30b';  
-        # withou zenrow
+        # without zenrow
         # self.browser = self.pw.chromium.launch(headless=True)
         # self.context = self.browser.new_context()
         # self.page = self.context.new_page()
         
-        # use zenrow
+        # use zenrow    
         self.browser = self.pw.chromium.connect_over_cdp(self.connection_url)
         self.context = self.browser.contexts[0]
         self.page = self.context.new_page()
@@ -23,10 +23,10 @@ class WebHackingBot:
         
         #login credentials
         self.username = "student"
-        self.password = "Password123"
+        self.password = "Password1234"
         
         #zenrow credentials
-        api_key = "8d52a81b3ca57cdc829963a7b6b17851e192a30b"
+        self.api_key = "8d52a81b3ca57cdc829963a7b6b17851e192a30b"
     
     def capcha_by_pass_with_zenrow(self, page):
         base_url = page
@@ -75,7 +75,6 @@ class WebHackingBot:
         # self.capcha_by_pass_with_zenrow(contact_page_url)
         # return
         
-        
         # let use check if the contact page has been returned
         contact_us_heading = self.page.locator("h1.post-title", has_text="Contact")
         if contact_us_heading.count() <= 0:
@@ -97,6 +96,11 @@ class WebHackingBot:
         print(f"COMMENT: {comment_field}")
         print(f"SUBMIT BUTTON: {submit_button}")
         
+        # let us check if the message exists in the dom initially
+        is_message_available = self.page.locator("p", has_text="Thanks for contacting us! We will be in touch with you shortly.")
+        if is_message_available.count() <= 0:
+            print("The success message is not available in the DOM")
+        
         if (
             first_name_field.count() <= 0 or
             last_name_field.count() <= 0 or
@@ -113,8 +117,23 @@ class WebHackingBot:
         comment_field.fill("automation testing with playwright")
     
         # submit the form
-        submit_button.click()        
-        time.sleep(10)
+        # submit_button.click()  
+        # time.sleep(10)
+        # we are facing timeout problems while submitting the form
+        
+        try:
+            with self.page.expect_response("**/wpforms*/submit*", timeout=60000) as response_info:
+                submit_button.click()
+            response = response_info.value
+            print(f"Form submission status: {response.status}")
+            #print(f"Response body: {await response.json()}")  # For async version
+        except TimeoutError:
+            print("Form submission timed out - likely blocked by CAPTCHA")
+            self.page.screenshot(path="form_submission_timeout.png")
+         
+        # the success alert is returned by javascript
+        # we can use wait_for_load_state to wait until js network finishes
+        self.page.wait_for_load_state("networkidle")
         
         # check if the success page have been returned
         # success_message = self.page.locator("p", has_text="Thanks for contacting us! We will be in touch with you shortly.")
@@ -143,14 +162,12 @@ class WebHackingBot:
             self.page.screenshot(path="success_screenshot.png")
             print(f"SUCCESS: {success_message}")
             print("Contact form submitted successfully")
-        except:
+        except Exception as e:
             self.page.screenshot(path="fail_screenshot.png")
             print(f"FAIL: {success_message}")
             print("Sending form failed — success message not visible")
         
         
-                
-     
         # we are being blocked by captcha so we need to implement
         # a Playwright CAPTCHA bypassing logic.
         
@@ -189,6 +206,13 @@ class WebHackingBot:
             return True
         except:
             print("Login failed. Try using different credentials.")
+            # check if he dynamic error div is visible
+            # error_message = self.page.locator("div#error", has_text="Your username is invalid!")
+            error_message = self.page.locator("div#error")
+            if error_message.count() <= 0:
+                print("Error message div not is visible")
+            else:
+                print(f"The error div message is visible {error_message.count()}")
             return False
         
         
