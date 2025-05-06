@@ -23,10 +23,14 @@ class WebHackingBot:
         
         #login credentials
         self.username = "student"
-        self.password = "Password1234"
+        self.password = "Password123"
         
-        #zenrow credentials
+        #zenrow api key
         self.api_key = "8d52a81b3ca57cdc829963a7b6b17851e192a30b"
+    
+    def save_page_as_html(self, html):
+        with open("page_content.html", "w", encoding="utf-8") as f:
+            f.write(html)
     
     def capcha_by_pass_with_zenrow(self, page):
         base_url = page
@@ -126,7 +130,7 @@ class WebHackingBot:
                 submit_button.click()
             response = response_info.value
             print(f"Form submission status: {response.status}")
-            #print(f"Response body: {await response.json()}")  # For async version
+            # print(f"Response body: {await response.json()}")  # For async version
         except TimeoutError:
             print("Form submission timed out - likely blocked by CAPTCHA")
             self.page.screenshot(path="form_submission_timeout.png")
@@ -139,6 +143,7 @@ class WebHackingBot:
         # success_message = self.page.locator("p", has_text="Thanks for contacting us! We will be in touch with you shortly.")
         message = "Thanks for contacting us! We will be in touch with you shortly."
         success_message = self.page.get_by_text(message, exact=False)
+        #print(f"TEST: {success_message.count()}")
         #time.sleep(10)
         
         # on fail state
@@ -160,17 +165,17 @@ class WebHackingBot:
         try:
             expect(success_message).to_be_visible(timeout=15000)
             self.page.screenshot(path="success_screenshot.png")
+            self.save_page_as_html(self.page.content()) # save content as html
             print(f"SUCCESS: {success_message}")
             print("Contact form submitted successfully")
         except Exception as e:
             self.page.screenshot(path="fail_screenshot.png")
+            self.save_page_as_html(self.page.content()) # save content as html
             print(f"FAIL: {success_message}")
             print("Sending form failed — success message not visible")
         
-        
         # we are being blocked by captcha so we need to implement
         # a Playwright CAPTCHA bypassing logic.
-        
         
     def handle_automated_login(self) -> bool:
         # this is a seed url
@@ -208,7 +213,10 @@ class WebHackingBot:
             print("Login failed. Try using different credentials.")
             # check if he dynamic error div is visible
             # error_message = self.page.locator("div#error", has_text="Your username is invalid!")
-            error_message = self.page.locator("div#error")
+            # error_message = self.page.locator("div#error").get_by_text("Your username is invalid!", exact=False)
+            # get by text works, without matching with the case
+            error_message = self.page.get_by_text("Your username is invalid!", exact=False)
+
             if error_message.count() <= 0:
                 print("Error message div not is visible")
             else:
